@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "BankCard" ALTER COLUMN "userId" SET DATA TYPE TEXT;
