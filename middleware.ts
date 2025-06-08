@@ -5,9 +5,9 @@ const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/profile(.*)", "/"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
-
   const pathname = req.nextUrl.pathname;
 
+  // Allow unauthenticated users to access sign-in
   if (!userId) {
     if (pathname.startsWith("/sign-in")) {
       return NextResponse.next();
@@ -15,22 +15,26 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
+  // Check Clerk public metadata for profile completion
   const isProfileCompleted = (
     sessionClaims as {
-      metadata?: { isProfileCompleted?: boolean };
+      publicMetadata?: { isProfileCompleted?: boolean };
     }
-  )?.metadata?.isProfileCompleted;
+  )?.publicMetadata?.isProfileCompleted;
 
   const isOnProfilePage = pathname.startsWith("/profile");
   const isOnSignInPage = pathname.startsWith("/sign-in");
-  const isOnHomePage = pathname === "/";
 
+  // If profile not completed, force user to /profile
   if (!isProfileCompleted && !isOnProfilePage && !isOnSignInPage) {
     return NextResponse.redirect(new URL("/profile", req.url));
   }
-  if (isProfileCompleted && isOnProfilePage && !isOnHomePage) {
+
+  // If profile completed, prevent access to /profile (redirect to main page)
+  if (isProfileCompleted && isOnProfilePage) {
     return NextResponse.redirect(new URL("/", req.url));
   }
+
   return NextResponse.next();
 });
 

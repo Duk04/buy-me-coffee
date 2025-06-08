@@ -1,10 +1,31 @@
 "use server";
 
 import { currentUser } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/clerk-sdk-node";
 import prisma from "@/lib/prisma";
-
 import { z } from "zod";
-import { redirect } from "next/navigation";
+
+const schemaBank = z.object({
+  country: z.string().min(1, "Country is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  cardNumber: z
+    .string()
+    .min(16, "Card number must be 16 digits")
+    .max(16, "Card number must be 16 digits")
+    .regex(/^\d{16}$/, "Card number must be 16 digits"),
+  expiringMonth: z
+    .string()
+    .regex(/^(0[1-9]|1[0-2])$/, "Expiring month must be in MM format"),
+  expiringYear: z
+    .string()
+    .regex(/^\d{4}$/, "Expiring year must be in YYYY format"),
+  cvv: z
+    .string()
+    .min(3, "CVV is required")
+    .max(4, "CVV must be 3 or 4 digits")
+    .regex(/^\d{3,4}$/, "CVV must be 3 or 4 digits"),
+});
 
 export async function createCard(_prevState: any, formData: FormData) {
   const user = await currentUser();
@@ -16,30 +37,7 @@ export async function createCard(_prevState: any, formData: FormData) {
       ZodError: {},
     };
   }
-  const validationBank = z.object({
-    country: z.string().min(1, "Country is required"),
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    cardNumber: z
-      .string()
-      .min(16, "Card number must be 16 digits")
-      .max(16, "Card number must be 16 digits")
-      .regex(/^\d{16}$/, "Card number must be 16 digits"),
-    expiringMonth: z
-      .string()
-      .min(1, "Expiring month is required")
-      .regex(/^(0[1-9]|1[0-2])$/, "Expiring month must be in MM format"),
-    expiringYear: z
-      .string()
-      .min(1, "Expiring year is required")
-      .regex(/^\d{4}$/, "Expiring year must be in YYYY format"),
-    cvv: z
-      .string()
-      .min(3, "CVV is required")
-      .max(4, "CVV must be 3 or 4 digits")
-      .regex(/^\d{3,4}$/, "CVV must be 3 or 4 digits"),
-  });
-  const schemaBank = validationBank;
+
   const values = {
     country: formData.get("country"),
     firstName: formData.get("firstName"),
@@ -75,10 +73,8 @@ export async function createCard(_prevState: any, formData: FormData) {
     1
   );
 
-  console.log(parsed.data);
-
   try {
-    const existing = await prisma.bankCard.findUnique({
+    const existing = await prisma.bankCard.findFirst({
       where: { userId },
     });
 
@@ -92,7 +88,6 @@ export async function createCard(_prevState: any, formData: FormData) {
     await prisma.bankCard.create({
       data: {
         userId,
-        user: userId,
         country,
         firstName,
         lastName,
@@ -102,14 +97,18 @@ export async function createCard(_prevState: any, formData: FormData) {
       },
     });
 
+    // Update Clerk metadata so middleware allows main page
+    await clerkClient.users.updateUserMetadata(userId, {
+      publicMetadata: { isProfileCompleted: true },
+    });
+
     return {
       message: "Card created successfully",
       ZodError: {},
     };
   } catch (error) {
-    console.error("Error creating card:", error);
     return {
-      message: "Database error. Please try again later.",
+      message: "Database error",
       ZodError: {},
     };
   }

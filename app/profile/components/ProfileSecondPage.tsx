@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -19,39 +18,10 @@ import { ProfilePageProps } from "@/hook/typeProfile";
 import { countries, month, year } from "@/hook/allCOuntry";
 import { createCard } from "@/app/actions/createcard";
 
-const ZodErrors = ({ error }: { error?: string[] }) =>
-  error?.length ? (
-    <div className="text-red-500 text-xs flex items-center gap-1 mt-1">
-      <XCircle className="size-4" />
-      {error[0]}
-    </div>
-  ) : null;
-
-type ZodErrorType = {
-  country?: string[];
-  firstName?: string[];
-  lastName?: string[];
-  cardNumber?: string[];
-  cardHolderName?: string[];
-  expiringMonth?: string[];
-  expiringYear?: string[];
-  cvv?: string[];
-  [key: string]: string[] | undefined;
-};
-
-const INITIAL_STATE: {
-  message: string;
-  ZodError: ZodErrorType;
-} = {
-  message: "",
-  ZodError: {},
-};
-
 export const ProfileSecondPage: React.FC<ProfilePageProps> = ({
   onPrev,
   onFormChange,
   onError,
-
   formValue,
   error,
 }) => {
@@ -61,7 +31,6 @@ export const ProfileSecondPage: React.FC<ProfilePageProps> = ({
     setValue,
     watch,
     setError,
-
     formState: { errors },
   } = useForm<BankFormData>({
     resolver: zodResolver(schemaBank),
@@ -85,13 +54,10 @@ export const ProfileSecondPage: React.FC<ProfilePageProps> = ({
     return () => subscription.unsubscribe();
   }, [watch, onFormChange]);
 
-  const { push } = useRouter();
-
   const onSubmit = async (data: BankFormData) => {
     onFormChange(data);
-    console.log("object", data);
-    const formData = new FormData();
 
+    const formData = new FormData();
     formData.append("country", data.country || "");
     formData.append("firstName", data.firstName || "");
     formData.append("lastName", data.lastName || "");
@@ -104,23 +70,22 @@ export const ProfileSecondPage: React.FC<ProfilePageProps> = ({
 
     if (result?.message === "Card created successfully") {
       setSubmitMessage("Card created successfully!");
-
-      push("/");
-      if (error) onError("");
+      if (onError) onError("");
+      setTimeout(() => {
+        window.location.reload();
+        window.location.replace("/");
+      }, 1000);
     } else {
       setSubmitMessage(result?.message || "Something went wrong.");
-
       if (result?.ZodError) {
         Object.keys(errors).forEach((field) => {
           setError(field as keyof BankFormData, { message: "" });
         });
-
         Object.entries(result.ZodError).forEach(([key, messages]) => {
           if (Array.isArray(messages) && messages.length) {
             setError(key as keyof BankFormData, { message: messages[0] });
           }
         });
-
         if (onError) onError(result.message || "Validation error");
       }
     }

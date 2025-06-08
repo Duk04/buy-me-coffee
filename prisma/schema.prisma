@@ -21,7 +21,6 @@ model BankCard {
   cardNumber    String
   expiryDate    DateTime
   cvc           String
-  user          String
   userId        String      @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

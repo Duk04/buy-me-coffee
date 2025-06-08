@@ -37,7 +37,7 @@ const INITIAL_STATE: FormStateType = {
   ZodError: { avatarImage: [], name: [], about: [], socialMediaURL: [] },
 };
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const ErrorMessage: React.FC<{ message?: string }> = ({ message }) =>
   message ? (
