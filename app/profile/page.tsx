@@ -37,7 +37,6 @@ const ProfilePage = () => {
 
   const handleSubmit = () => {
     console.log("Final form submitted with values:", formValue);
-    handleReset();
   };
 
   return (
@@ -61,9 +60,6 @@ const ProfilePage = () => {
             error={error}
             onReset={handleReset}
           />
-          {error && (
-            <p className="text-red-600 text-sm mt-3 text-center">{error}</p>
-          )}
         </motion.div>
       </AnimatePresence>
     </div>

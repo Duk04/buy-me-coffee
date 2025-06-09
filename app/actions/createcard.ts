@@ -1,57 +1,40 @@
 "use server";
 
-import { currentUser } from "@clerk/nextjs/server";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
+import { currentUser } from "@clerk/nextjs/server";
 
-const schemaBank = z.object({
-  country: z.string().min(1, "Country is required"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  cardNumber: z
-    .string()
-    .min(16, "Card number must be 16 digits")
-    .max(16, "Card number must be 16 digits")
-    .regex(/^\d{16}$/, "Card number must be 16 digits"),
-  expiringMonth: z
-    .string()
-    .regex(/^(0[1-9]|1[0-2])$/, "Expiring month must be in MM format"),
-  expiringYear: z
-    .string()
-    .regex(/^\d{4}$/, "Expiring year must be in YYYY format"),
-  cvv: z
-    .string()
-    .min(3, "CVV is required")
-    .max(4, "CVV must be 3 or 4 digits")
-    .regex(/^\d{3,4}$/, "CVV must be 3 or 4 digits"),
-});
-
-export async function createCard(_prevState: any, formData: FormData) {
+export async function createCard(_: any, formData: FormData) {
   const user = await currentUser();
-  const userId = user?.id;
-
-  if (!userId) {
-    return {
-      message: "User ID is missing or invalid.",
-      ZodError: {},
-    };
+  if (!user?.id) {
+    return { success: false, message: "User not authenticated", ZodError: {} };
   }
 
-  const values = {
-    country: formData.get("country"),
-    firstName: formData.get("firstName"),
-    lastName: formData.get("lastName"),
-    cardNumber: formData.get("cardNumber"),
-    expiringMonth: formData.get("expiringMonth"),
-    expiringYear: formData.get("expiringYear"),
-    cvv: formData.get("cvv"),
-  };
+  // Validate form data (your existing schema here)
+  const schema = z.object({
+    country: z.string().min(1),
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    cardNumber: z
+      .string()
+      .length(16)
+      .regex(/^\d{16}$/),
+    expiringMonth: z.string().regex(/^(0[1-9]|1[0-2])$/),
+    expiringYear: z.string().regex(/^\d{4}$/),
+    cvv: z
+      .string()
+      .min(3)
+      .max(4)
+      .regex(/^\d{3,4}$/),
+  });
 
-  const parsed = schemaBank.safeParse(values);
+  const values = Object.fromEntries(formData);
+  const parsed = schema.safeParse(values);
 
   if (!parsed.success) {
     return {
+      success: false,
       message: "Validation failed",
       ZodError: parsed.error.flatten().fieldErrors,
     };
@@ -66,28 +49,19 @@ export async function createCard(_prevState: any, formData: FormData) {
     expiringYear,
     cvv,
   } = parsed.data;
-
-  const expiryDate = new Date(
-    Number(expiringYear),
-    Number(expiringMonth) - 1,
-    1
-  );
+  const expiryDate = new Date(+expiringYear, +expiringMonth - 1, 1);
 
   try {
-    const existing = await prisma.bankCard.findFirst({
-      where: { userId },
+    const existing = await prisma.bankCard.findUnique({
+      where: { userId: user.id },
     });
-
     if (existing) {
-      return {
-        message: "A card is already associated with this user.",
-        ZodError: {},
-      };
+      return { success: false, message: "Card already exists", ZodError: {} };
     }
 
     await prisma.bankCard.create({
       data: {
-        userId,
+        userId: user.id,
         country,
         firstName,
         lastName,
@@ -97,19 +71,17 @@ export async function createCard(_prevState: any, formData: FormData) {
       },
     });
 
-    // Update Clerk metadata so middleware allows main page
-    await clerkClient.users.updateUserMetadata(userId, {
+    await clerkClient.users.updateUser(user.id, {
       publicMetadata: { isProfileCompleted: true },
     });
 
     return {
+      success: true,
       message: "Card created successfully",
       ZodError: {},
     };
   } catch (error) {
-    return {
-      message: "Database error",
-      ZodError: {},
-    };
+    console.error(error);
+    return { success: false, message: "Database error", ZodError: {} };
   }
 }

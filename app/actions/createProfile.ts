@@ -37,7 +37,6 @@ export const createProfile = async (formData: FormData) => {
       about: validated.data.about,
       avatarImage: avatarImageUrl,
       socialMediaURL: validated.data.socialMediaURL,
-      successMessage: "Profile created successfully",
       user: user.id,
     },
   });

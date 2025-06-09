@@ -347,3 +347,36 @@ export const ProfileFirstPage: React.FC<ProfileFirstPageProps> = ({
     </form>
   );
 };
+
+// const {
+//     register,
+//     handleSubmit,
+//     setError,
+//     formState: { errors },
+//   } = useForm();
+//   const [submitMessage, setSubmitMessage] = useState("");
+//   const router = useRouter();
+
+//   const onSubmit = async (data: any) => {
+//     const formData = new FormData();
+
+//     Object.entries(data).forEach(([key, value]) => {
+//       formData.append(key, value as string);
+//     });
+
+//     const result = await createCard({}, formData);
+
+//     if (result.message === "Card created successfully") {
+//       setSubmitMessage(result.message);
+//       router.push("/"); // ✅ fixed redirect
+//     } else {
+//       setSubmitMessage(result.message);
+//       if (result.ZodError) {
+//         Object.entries(result.ZodError).forEach(([key, msgs]) => {
+//           if (msgs?.[0]) {
+//             setError(key as any, { message: msgs[0] });
+//           }
+//         });
+//       }
+//     }
+//   };

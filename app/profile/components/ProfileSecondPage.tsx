@@ -23,7 +23,6 @@ export const ProfileSecondPage: React.FC<ProfilePageProps> = ({
   onFormChange,
   onError,
   formValue,
-  error,
 }) => {
   const {
     register,
@@ -68,19 +67,17 @@ export const ProfileSecondPage: React.FC<ProfilePageProps> = ({
 
     const result = await createCard({}, formData);
 
-    if (result?.message === "Card created successfully") {
+    if (result?.success) {
       setSubmitMessage("Card created successfully!");
       if (onError) onError("");
-      setTimeout(() => {
-        window.location.reload();
-        window.location.replace("/");
-      }, 1000);
+      window.location.reload();
     } else {
       setSubmitMessage(result?.message || "Something went wrong.");
       if (result?.ZodError) {
         Object.keys(errors).forEach((field) => {
           setError(field as keyof BankFormData, { message: "" });
         });
+
         Object.entries(result.ZodError).forEach(([key, messages]) => {
           if (Array.isArray(messages) && messages.length) {
             setError(key as keyof BankFormData, { message: messages[0] });
@@ -278,6 +275,7 @@ export const ProfileSecondPage: React.FC<ProfilePageProps> = ({
           Submit
         </Button>
       </div>
+
       {submitMessage && (
         <div
           className={`text-center text-sm mt-2 ${
